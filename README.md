@@ -24,8 +24,11 @@ Once the analysis has finished, the output from the last step can be loaded by c
 The function GetEnergyFromToT takes (x pixel, y pixel, ToT, returns energy, returns resolution)
 
 > root -l convertTot.C++
+
 > convertTot a; // you can spectify the input file name in the first option. so a("/eos/atlas/atlascerngroupdisk/penn-ww/TestBeam/TRT/fout.root")
+
 > double en, reso;
+
 > a.GetEnergyFromToT(10,10, 15.0, en, reso)
 
 The energy and resolution are loaded in en and reso, respectively. fout.root is the input to this last function
