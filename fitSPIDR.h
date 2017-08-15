@@ -24,18 +24,23 @@ using namespace std;
 #define TOTMIN 0
 #define TOTMAX TOTNBINS
 #define SIGMATOFWHM 2.355
-#define NSIGMALEFT 5.
-#define NSIGMARIGHT 1.
+#define NSIGMALEFT 3.
+#define NSIGMARIGHT 3.
 #define NBINSDISTRIBUTIONS 100
-
+#define MAXMEAN 24.0 //  Ca 24 GaAs 29 Ag 53 Cu 24 Sn 60 Zr 35 Ti 20
+ 
 const char *elementInfoFileName = "fluorescenceData.dat";
 //const char *fitFunctionExpr = "[0] * exp(- ((x-[1]) * (x-[1])) / (2. * [2] * [2])) / (TMath::Sqrt(2. * TMath::Pi()) * [2])";
-const char *fitFunctionExpr = "[0]*exp(-0.5*((x-[1])/[2])^2)+[3]";
+//const char *fitFunctionExpr = "[0]*exp(-0.5*((x-[1])/[2])^2)";
+//const char *fitFunctionExpr = "[0]*exp(-0.5*((x-[1])/[2])^2)+ (([3]+[4]*x)>0 ? ([3]+[4]*x) : 0.0 )";
+const char *fitFunctionExpr = "[0]*exp(-0.5*((x-[1])/[2])^2) + [3]*exp(-0.5*((x-[4])/[5])^2)";
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 // element //////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 
-int fitSPIDR(const char *fileNameBase="/tmp/data_Zr",
+int fitSPIDR(const char *fileNameBase="/tmp/data_Ca",
+	const char *elementName="");
+int DoFittingSPIDR(const char *fileNameBase="/tmp/data_Ca",
 	const char *elementName="");
 
 typedef struct element{
@@ -380,6 +385,10 @@ int fitSpectra(TH1F ***h1Spectrum,
   cout << __PRETTY_FUNCTION__ << ": initializing parameters" << endl;
   initializeParameters(h1Spectrum, parameters);
 
+  std::string CompName ="Ca";
+  
+  TCanvas *can = new  TCanvas("c", "c", 500, 500);
+  
   // fitting
   cout << __PRETTY_FUNCTION__ << ": fitting" << endl;
   for(unsigned int ix=0; ix<NPIXELSX; ix++){
@@ -389,33 +398,183 @@ int fitSpectra(TH1F ***h1Spectrum,
       // fit range initialization
       const double rangeMin = parameters.mu[ix][iy] - NSIGMALEFT * parameters.mu[ix][iy];
       const double rangeMax = parameters.mu[ix][iy] + NSIGMARIGHT * parameters.mu[ix][iy];
-      TF1 *fFit = new TF1(name, fitFunctionExpr, rangeMin, rangeMax); 
+      //TF1 *fFit = new TF1(name, fitFunctionExpr, rangeMin, rangeMax);
+      TF1 *fFit= NULL;
+      if(CompName=="Sn")        fFit = new TF1(name, fitFunctionExpr, 25.0, MAXMEAN); 
+      else if(CompName=="Zr")   fFit = new TF1(name, fitFunctionExpr, 15.0, MAXMEAN); 
+      else if(CompName=="Cu")   fFit = new TF1(name, fitFunctionExpr, 4.0, 24.0);  
+      else if(CompName=="GaAs") fFit = new TF1(name, fitFunctionExpr, 4.0, 26.0);  
+      else if(CompName=="Ca")   fFit = new TF1(name, fitFunctionExpr, 4.0, 19.0); 
+      else if(CompName=="Ag")   fFit = new TF1(name, fitFunctionExpr, 25.0, MAXMEAN); 
+      else if(CompName=="Ti")   fFit = new TF1(name, fitFunctionExpr, 4.0, 26.0); 
+
       // first fit
       fFit -> SetParNames("scale", "#mu", "#sigma");
-      fFit -> SetParLimits(0, 20., 10000.);
-      fFit -> SetParLimits(1, 0.5, 100.);
-      fFit -> SetParLimits(2, 0.5, 10.);
-      fFit -> SetParLimits(3, 0., 100.);
-      fFit -> SetParameter(0, parameters.scale[ix][iy]);
-      fFit -> SetParameter(1, parameters.mu[ix][iy]);
-      fFit -> SetParameter(2, parameters.sigma[ix][iy]);
-      fFit -> SetParameter(3, 10.0);
-      h1Spectrum[ix][iy] -> Fit(fFit, "Q && R"); // memory leak in the TLinearFitter class, bug in some root versions
+
+      // Zn
+      if(CompName=="Zr") {
+	fFit -> SetParLimits(0, 5., 500.);
+	fFit -> SetParLimits(1, 7.0, MAXMEAN);
+	fFit -> SetParLimits(2, 0.2, 5.);
+	fFit -> SetParLimits(3, 2., 50.);
+	fFit -> SetParLimits(4, 3.0, 24.0);
+	fFit -> SetParLimits(5, 3.0, 10.);
+	fFit -> SetParameter(0, 150.0);
+	fFit -> SetParameter(1, 25.0);
+	fFit -> SetParameter(2, 0.9);
+	fFit -> SetParameter(3, 18.0);
+	fFit -> SetParameter(4, 20.0);       
+	fFit -> SetParameter(5, 5.0);
+      }
+      
+      // Sn
+      if(CompName=="Sn"){
+	fFit -> SetParLimits(0, 30., 150.);
+	fFit -> SetParLimits(1, 30.0, MAXMEAN);
+	fFit -> SetParLimits(2, 0.75, 5.);
+	//fFit -> SetParLimits(3, 0., 100.);
+	//fFit -> SetParLimits(4, -20., 0.);
+	fFit -> SetParLimits(3, 2., 15.);
+	fFit -> SetParLimits(4, 20.0, MAXMEAN);      
+	fFit -> SetParLimits(5, 2.5, 10.);      
+	/*
+	  fFit -> SetParameter(0, parameters.scale[ix][iy]);
+	  fFit -> SetParameter(1, parameters.mu[ix][iy]);
+	  fFit -> SetParameter(2, parameters.sigma[ix][iy]);
+	  fFit -> SetParameter(3, 3.0);
+	*/
+	
+	fFit -> SetParameter(0, 35.0);
+	fFit -> SetParameter(1, 40.0);
+	fFit -> SetParameter(2, 1.0);
+	//fFit -> SetParameter(3, 3.0);
+	//fFit -> SetParameter(4, -1.0);
+	fFit -> SetParameter(3, 5.0);
+	fFit -> SetParameter(4, 30.0);            
+	fFit -> SetParameter(5, 5.0);
+      }
+
+      // Cu
+      if(CompName=="Cu"){
+	fFit -> SetParLimits(0, 5., 500.);
+	fFit -> SetParLimits(1, 7.0, MAXMEAN);
+	fFit -> SetParLimits(2, 0.2, 5.);
+	fFit -> SetParLimits(3, 2., 120.);
+	fFit -> SetParLimits(4, 3.0, 10.0);
+	fFit -> SetParLimits(5, 3.0, 10.);
+	fFit -> SetParameter(0, 150.0);
+	fFit -> SetParameter(1, 15.0);
+	fFit -> SetParameter(2, 0.5);
+	fFit -> SetParameter(3, 25.0);
+	fFit -> SetParameter(4, 5.0);       
+	fFit -> SetParameter(5, 5.0);
+      }
+      // Ag
+      if(CompName=="Ag"){
+	fFit -> SetParLimits(0, 5., 200.);
+	fFit -> SetParLimits(1, 25.0, MAXMEAN);
+	fFit -> SetParLimits(2, 0.2, 5.);
+	fFit -> SetParLimits(3, 2., 120.);
+	fFit -> SetParLimits(4, 3.0, 40.0);
+	fFit -> SetParLimits(5, 3.0, 10.);
+	fFit -> SetParameter(0, 150.0);
+	fFit -> SetParameter(1, 33.0);
+	fFit -> SetParameter(2, 0.5);
+	fFit -> SetParameter(3, 10.0);
+	fFit -> SetParameter(4, 30.0);       
+	fFit -> SetParameter(5, 5.0);
+      }
+      
+      // GaAs
+      if(CompName=="GaAs"){
+	fFit -> SetParLimits(0, 5., 500.);
+	fFit -> SetParLimits(1, 7.0, MAXMEAN);
+	fFit -> SetParLimits(2, 0.2, 5.);
+	fFit -> SetParLimits(3, 2., 120.);
+	fFit -> SetParLimits(4, 3.0, 10.0);
+	fFit -> SetParLimits(5, 3.0, 10.);
+	fFit -> SetParameter(0, 150.0);
+	fFit -> SetParameter(1, 15.0);
+	fFit -> SetParameter(2, 0.5);
+	fFit -> SetParameter(3, 25.0);
+	fFit -> SetParameter(4, 5.0);       
+	fFit -> SetParameter(5, 5.0);
+      }
+      // Ca
+      if(CompName=="Ca"){
+	fFit -> SetParLimits(0, 5., 500.);
+	fFit -> SetParLimits(1, 7.0, MAXMEAN);
+	fFit -> SetParLimits(2, 0.2, 3.);
+	fFit -> SetParLimits(3, 2., 500.);
+	fFit -> SetParLimits(4, 3.0, 14.0);
+	fFit -> SetParLimits(5, 0.2, 3.);
+	fFit -> SetParameter(0, 80.0);
+	fFit -> SetParameter(1, 15.0);
+	fFit -> SetParameter(2, 0.5);
+	fFit -> SetParameter(3, 150.0);
+	fFit -> SetParameter(4, 7.0);       
+	fFit -> SetParameter(5, 2.5);
+      }
+      // Ti
+      if(CompName=="Ti"){
+	fFit -> SetParLimits(0, 5., 500.);
+	fFit -> SetParLimits(1, 4.0, MAXMEAN);
+	fFit -> SetParLimits(2, 0.2, 5.);
+	fFit -> SetParLimits(3, 2., 50.);
+	fFit -> SetParLimits(4, 3.0, 14.0);
+	fFit -> SetParLimits(5, 3, 7.);
+	fFit -> SetParameter(0, 250.0);
+	fFit -> SetParameter(1, 9.0);
+	fFit -> SetParameter(2, 1.0);
+	fFit -> SetParameter(3, 5.0);
+	fFit -> SetParameter(4, 7.0);       
+	fFit -> SetParameter(5, 4);
+      }
+            
+      h1Spectrum[ix][iy] -> Fit(fFit, "Q && R M P"); // memory leak in the TLinearFitter class, bug in some root versions
       // second fit
+      /*
       fFit -> SetRange(fFit -> GetParameter(1) - NSIGMALEFT * fFit -> GetParameter(2), fFit -> GetParameter(1) + NSIGMARIGHT * fFit -> GetParameter(2));
       fFit -> SetParameter(0, fFit -> GetParameter(0));
       fFit -> SetParameter(1, fFit -> GetParameter(1));
       fFit -> SetParameter(2, fFit -> GetParameter(2));
+      fFit -> SetParameter(3, fFit -> GetParameter(3));
+      //fFit -> SetParameter(4, fFit -> GetParameter(4));      
       h1Spectrum[ix][iy] -> Fit(fFit, "Q && R"); // memory leak in the TLinearFitter class, bug in some root versions
+      */
+      if(fFit -> GetParameter(2)>30.0){
+	can->Clear();
+	h1Spectrum[ix][iy] ->Draw();
+	can->Update();
+	can->WaitPrimitive();
+	std::cout <<"mean: " << fFit -> GetParameter(0) << " " << fFit -> GetParameter(1) << " " << fFit -> GetParameter(2) << " " << fFit -> GetParameter(3)
+		  << " " << fFit -> GetParameter(4)
+		  << " " << h1Spectrum[ix][iy]->GetBinContent(20)
+		  << " " << h1Spectrum[ix][iy]->GetBinError(20)	  
+		  << std::endl;	
+	}
+      
       // retrieving parameters
-      parameters.scale[ix][iy] = fFit -> GetParameter(0);
-      parameters.mu[ix][iy] = fFit -> GetParameter(1);
-      parameters.sigma[ix][iy] = fFit -> GetParameter(2);
-      parameters.scaleErr[ix][iy] = fFit -> GetParError(0);
-      parameters.muErr[ix][iy] = fFit -> GetParError(1);
-      parameters.sigmaErr[ix][iy] = fFit -> GetParError(2);
+      if(CompName=="Ca"){
+	parameters.scale[ix][iy] = fFit -> GetParameter(3);
+	parameters.mu[ix][iy] = fFit -> GetParameter(4);
+	parameters.sigma[ix][iy] = fFit -> GetParameter(5);
+	parameters.scaleErr[ix][iy] = fFit -> GetParError(3);
+	parameters.muErr[ix][iy] = fFit -> GetParError(4);
+	parameters.sigmaErr[ix][iy] = fFit -> GetParError(5);
+      }else{
+	parameters.scale[ix][iy] = fFit -> GetParameter(0);
+	parameters.mu[ix][iy] = fFit -> GetParameter(1);
+	parameters.sigma[ix][iy] = fFit -> GetParameter(2);
+	parameters.scaleErr[ix][iy] = fFit -> GetParError(0);
+	parameters.muErr[ix][iy] = fFit -> GetParError(1);
+	parameters.sigmaErr[ix][iy] = fFit -> GetParError(2);
+      }
       parameters.chi2[ix][iy] = fFit -> GetChisquare();
       parameters.ndof[ix][iy] = fFit -> GetNDF();
+
+
+      
       delete fFit;
     }
     loadBar(ix, NPIXELSX);    

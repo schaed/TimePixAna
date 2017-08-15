@@ -5,8 +5,9 @@ int fitSPIDR(const char *fileNameBase,
 
   gErrorIgnoreLevel = kWarning; // to suppress output
 
-  std::cout << "check" << std::endl;
-
+  DoFittingSPIDR(fileNameBase,elementName);
+  return 1;
+  
   char fileNameIn[1000];
   sprintf(fileNameIn, "%s.dat", fileNameBase);
   char fileNameSortIn[1000];
@@ -131,4 +132,93 @@ int fitSPIDR(const char *fileNameBase,
   deleteSpectra(h1Spectrum);
   
   return 0;
+}
+
+
+int DoFittingSPIDR(const char *fileNameBase,
+		   const char *elementName){
+
+  char fileNameRoot[1000];
+  sprintf(fileNameRoot, "%s.root", fileNameBase);  
+  char fileNameRootTree[1000];
+  sprintf(fileNameRootTree, "%s_tree.root", fileNameBase);  
+
+  cout << __PRETTY_FUNCTION__ << ": opening root tree" << endl;  
+  TFile *file = TFile::Open(fileNameRoot, "READ");
+  if(file == NULL){
+    cout << __PRETTY_FUNCTION__ << ": ERROR!!! - cannot open file " << fileNameRoot << endl;
+    return 1;
+  }
+  char fileNamePar[1000];
+  sprintf(fileNamePar, "%s.par", fileNameBase);
+  
+  TFile *filetree = TFile::Open(fileNameRootTree, "RECREATE");  
+
+  TH1F ***h1Spectrum = new TH1F**[NPIXELSX];
+  char name[100];
+  for(unsigned int ix=0; ix<NPIXELSX; ix++){
+    h1Spectrum[ix] = new TH1F*[NPIXELSY];
+    for(unsigned int iy=0; iy<NPIXELSY; iy++){
+      sprintf(name, "h1SpectrumX%03dY%03d", ix, iy);
+      h1Spectrum[ix][iy] = static_cast<TH1F*>(file->Get(name));
+    }
+  }
+
+  //////////////////
+  // fitting spectra
+  //////////////////
+  cout << __PRETTY_FUNCTION__ << ": fitting spectra" << endl;
+  parameters_t parameters;
+  if(fitSpectra(h1Spectrum, parameters, fileNamePar)){
+    cout << __PRETTY_FUNCTION__ << ": ERROR!!! - cannot fit spectra" << endl;    
+    return 1;
+  }
+ 
+  // writing tree
+  cout << __PRETTY_FUNCTION__ << ": writing tree" << endl;
+  filetree->cd();
+  TTree *tree = new TTree("fit", "fit");
+  unsigned int bX = 0;
+  tree -> Branch("x", &bX);
+  unsigned int bY = 0;
+  tree -> Branch("y", &bY);
+  double bScale = 0.;
+  tree -> Branch("scale", &bScale);
+  double bMu = 0.;
+  tree -> Branch("mu", &bMu);
+  double bSigma = 0.;
+  tree -> Branch("sigma", &bSigma);
+  double bScaleErr = 0.;
+  tree -> Branch("scaleErr", &bScaleErr);
+  double bMuErr = 0.;
+  tree -> Branch("muErr", &bMuErr);
+  double bSigmaErr = 0.;
+  tree -> Branch("sigmaErr", &bSigmaErr);
+  double bChi2 = 0.;
+  tree -> Branch("chi2", &bChi2);
+  double bNdof = 0.;
+  tree -> Branch("ndof", &bNdof);
+  for(unsigned int ix=0; ix<NPIXELSX; ix++){
+    for(unsigned int iy=0; iy<NPIXELSY; iy++){
+      bX = ix;
+      bY = iy;
+      bScale = parameters.scale[ix][iy];
+      bMu = parameters.mu[ix][iy];
+      bSigma = parameters.sigma[ix][iy];      
+      bScaleErr = parameters.scale[ix][iy];
+      bMuErr = parameters.muErr[ix][iy];
+      bSigmaErr = parameters.sigmaErr[ix][iy];
+      bChi2 = parameters.chi2[ix][iy];
+      bNdof = parameters.ndof[ix][iy];      
+      tree -> Fill();
+    }
+    loadBar(ix, NPIXELSX);    
+  }
+  filetree->cd();
+  tree->SetDirectory(filetree);
+  tree -> Write();
+  filetree->Close();
+  
+  //delete tree;
+  file->Close();
 }
