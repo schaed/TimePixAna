@@ -1,10 +1,10 @@
+#ifndef CONVERTTOT
+#define CONVERTTOT
 #include <iostream>
 #include <fstream>
 #include <algorithm>    // std::sort
 #include <vector> 
 using namespace std;
-
-#include "progressBar.h"
 
 #include <TH1.h>
 #include <TF1.h>
@@ -18,10 +18,13 @@ using namespace std;
 #define NPIXELSY 256
 
 class convertTot{
-  public:
 
-  convertTot(const char *fileName="data/fout.root", const char *fitFunc = "[0]*x + [1] - [2]/(x-3.0)");
-  ~convertTot();
+ public:  
+  //convertTot(const char *fileName="data/fout.root", const char *fitFunc = "[0]*x + [1] - [2]/(x-3.0)");
+  convertTot(const char *fileName="data/fout.root", const char *fitFunc = "-([1]-3*[0]-x)/2.0/[0] + sqrt(([1]-3*[0]-x)*([1]-3*[0]-x) +4.0*[0]*(3*[1]+[2]-3.0*x) )/2.0/[0]");
+  virtual ~convertTot();
+
+  
   void Load();
 
   void GetEnergyFromToT(const unsigned x, const unsigned y, const double ToT, double &energy, double &energy_resolution);
@@ -41,5 +44,7 @@ class convertTot{
   const char *m_fitFunctionExpr;
 
   parameters m_parameters;
-  
+  //TF1 *fFit[NPIXELSX][NPIXELSY];
+  //TF1 *fFitUp[NPIXELSX][NPIXELSY];  
 };
+#endif

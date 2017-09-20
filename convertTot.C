@@ -66,21 +66,24 @@ void convertTot::GetEnergyFromToT(const unsigned x, const unsigned y, const doub
   sprintf(name, "fFitX%03dY%03d", x, y);
   char nameup[100];
   sprintf(nameup, "fFitUpX%03dY%03d", x, y);
-  
-  TF1 *fFit   = new TF1(name,   m_fitFunctionExpr, 3.0, 26.0);
-  TF1 *fFitUp = new TF1(nameup, m_fitFunctionExpr, 3.0, 26.0);
 
-  fFit->SetParameter(0,m_parameters.f0[x][y]);
-  fFit->SetParameter(1,m_parameters.f1[x][y]);
-  fFit->SetParameter(2,m_parameters.f2[x][y]);
+  //if(fFit[x][y]==NULL){
+    TF1* fFit   = new TF1(name,   m_fitFunctionExpr, 3.0, 100.0);
+    TF1* fFitUp = new TF1(nameup, m_fitFunctionExpr, 3.0, 100.0);
 
-  fFitUp->SetParameter(0,m_parameters.fUp0[x][y]);
-  fFitUp->SetParameter(1,m_parameters.fUp1[x][y]);
-  fFitUp->SetParameter(2,m_parameters.fUp2[x][y]);  
+    fFit->SetParameter(0,m_parameters.f0[x][y]);
+    fFit->SetParameter(1,m_parameters.f1[x][y]);
+    fFit->SetParameter(2,m_parameters.f2[x][y]);
+    
+    fFitUp->SetParameter(0,m_parameters.fUp0[x][y]);
+    fFitUp->SetParameter(1,m_parameters.fUp1[x][y]);
+    fFitUp->SetParameter(2,m_parameters.fUp2[x][y]);      
+    //}
 
   energy = fFit->Eval(ToT);
-  energy_resolution = fFitUp->Eval(ToT)-energy;
-  
+  energy_resolution = fabs(fFitUp->Eval(ToT)-energy);
+  if(energy>1000.0) std::cout << "ERROR - ToT: " << ToT << " energy: " << energy << energy_resolution << std::endl;
+  //std::cout << "ToT: " << ToT << " energy: " << energy << " reso: " << energy_resolution << std::endl;
   delete fFit;
   delete fFitUp;
 }
