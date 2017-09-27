@@ -37,17 +37,34 @@ void convertTot::Load(){
   tree -> SetBranchAddress("fUp2", &bfUp2);  
   
   const unsigned nEntries = tree->GetEntries();
-  for(unsigned nEvt=0; nEvt<nEntries; ++nEvt){
 
-    tree->GetEntry(nEvt);
+  if(nEntries==1){
+    tree->GetEntry(0);
 
-    // parameters
-    m_parameters.f0[bX][bY]=bf0;
-    m_parameters.f1[bX][bY]=bf1;
-    m_parameters.f2[bX][bY]=bf2;
-    m_parameters.fUp0[bX][bY]=bfUp0;
-    m_parameters.fUp1[bX][bY]=bfUp1;
-    m_parameters.fUp2[bX][bY]=bfUp2;
+    for(unsigned x=0; x<256; ++x){
+      for(unsigned y=0; y<256; ++y){      
+	// parameters
+	m_parameters.f0[x][y]  =bf0;
+	m_parameters.f1[x][y]  =bf1;
+	m_parameters.f2[x][y]  =bf2;
+	m_parameters.fUp0[x][y]=bfUp0;
+	m_parameters.fUp1[x][y]=bfUp1;
+	m_parameters.fUp2[x][y]=bfUp2;
+      }
+    }
+  } else{
+    for(unsigned nEvt=0; nEvt<nEntries; ++nEvt){
+      
+      tree->GetEntry(nEvt);
+      
+      // parameters
+      m_parameters.f0[bX][bY]=bf0;
+      m_parameters.f1[bX][bY]=bf1;
+      m_parameters.f2[bX][bY]=bf2;
+      m_parameters.fUp0[bX][bY]=bfUp0;
+      m_parameters.fUp1[bX][bY]=bfUp1;
+      m_parameters.fUp2[bX][bY]=bfUp2;
+    }
   }
 
   delete tree;
@@ -86,4 +103,73 @@ void convertTot::GetEnergyFromToT(const unsigned x, const unsigned y, const doub
   //std::cout << "ToT: " << ToT << " energy: " << energy << " reso: " << energy_resolution << std::endl;
   delete fFit;
   delete fFitUp;
+}
+
+void convertTot::DrawAll()
+{
+  std::string opt="";
+  TCanvas *can = new TCanvas("fit_func","fit_func",500,600);
+  can->cd();
+  for(unsigned x=0; x<NPIXELSX; ++x){
+    std::cout << "x: " << x << std::endl;
+    for(unsigned y=0; y<NPIXELSY; ++y){    
+      char name[100];
+      sprintf(name, "fFitX%03dY%03d", x, y);
+      char nameup[100];
+      sprintf(nameup, "fFitUpX%03dY%03d", x, y);
+      
+      TF1* fFit   = new TF1(name,   m_fitFunctionExpr, 3.0, 40.0);
+      
+      fFit->SetParameter(0,m_parameters.f0[x][y]);
+      fFit->SetParameter(1,m_parameters.f1[x][y]);
+      fFit->SetParameter(2,m_parameters.f2[x][y]);
+      
+      //energy = fFit->Eval(ToT);
+      //delete fFit;
+      fFit->Draw(opt.c_str());
+      if(opt=="") opt="same";
+    } // end y
+  } // end x
+  std::cout << "Canvas!" << std::endl;
+  can->Update();
+  can->WaitPrimitive();
+  can->SaveAs("h1.root");
+  delete can;
+}
+
+
+void convertTot::CheckAll()
+{
+  std::string opt="";
+  //TCanvas *can = new TCanvas("fit_func","fit_func",500,600);
+  //can->cd();
+  for(unsigned x=0; x<NPIXELSX; ++x){
+    //std::cout << "x: " << x << std::endl;
+    for(unsigned y=0; y<NPIXELSY; ++y){    
+      char name[100];
+      sprintf(name, "fFitX%03dY%03d", x, y);
+      char nameup[100];
+      sprintf(nameup, "fFitUpX%03dY%03d", x, y);
+      
+      TF1* fFit   = new TF1(name,   m_fitFunctionExpr, 3.0, 40.0);
+      
+      fFit->SetParameter(0,m_parameters.f0[x][y]);
+      fFit->SetParameter(1,m_parameters.f1[x][y]);
+      fFit->SetParameter(2,m_parameters.f2[x][y]);
+      
+      double energy = fFit->Eval(40.0);
+      //if(energy>25.0) std::cout << "ToT: 25 en: " << energy << " x " << x << " y " << y << std::endl;
+      //energy = fFit->Eval(5.0);      
+      if(energy<18.0) std::cout << "ToT: 40 en: " << energy << " x " << x << " y " << y << std::endl;      
+      
+      delete fFit;
+      //fFit->Draw(opt.c_str());
+      //if(opt=="") opt="same";
+    } // end y
+  } // end x
+  //std::cout << "Canvas!" << std::endl;
+  //can->Update();
+  //can->WaitPrimitive();
+  //can->SaveAs("h1.root");
+  //delete can;
 }

@@ -21,14 +21,15 @@ class convertTot{
 
  public:  
   //convertTot(const char *fileName="data/fout.root", const char *fitFunc = "[0]*x + [1] - [2]/(x-3.0)");
-  convertTot(const char *fileName="data/fout.root", const char *fitFunc = "-([1]-3*[0]-x)/2.0/[0] + sqrt(([1]-3*[0]-x)*([1]-3*[0]-x) +4.0*[0]*(3*[1]+[2]-3.0*x) )/2.0/[0]");
+  convertTot(const char *fileName="data/foutnew.root", const char *fitFunc = "-([1]-3*[0]-x)/2.0/[0] + sqrt(([1]-3*[0]-x)*([1]-3*[0]-x) +4.0*[0]*(3*[1]+[2]-3.0*x) )/2.0/[0]");
   virtual ~convertTot();
 
   
   void Load();
 
   void GetEnergyFromToT(const unsigned x, const unsigned y, const double ToT, double &energy, double &energy_resolution);
-
+  void DrawAll();
+  void CheckAll();  
  typedef struct parameters{
  double f0[NPIXELSX][NPIXELSY];  
  double f1[NPIXELSX][NPIXELSY];
