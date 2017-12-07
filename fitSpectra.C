@@ -29,7 +29,7 @@ int fitSpectra(const char *fileNameAg,
   }
 
   TFile *fileCa = TFile::Open(fileNameCa, "READ");
-  if(fileCu == NULL){
+  if(fileCa == NULL){
     cout << __PRETTY_FUNCTION__ << ": ERROR!!! - cannot open file " << fileNameCa << endl;
     return 1;
   }  
@@ -121,7 +121,6 @@ int fitSpectra(const char *fileNameAg,
   treeGaAs -> SetBranchAddress("muErr", &bMuErrGaAs);
   treeTi   -> SetBranchAddress("muErr", &bMuErrTi);
 
-
   treeAg   -> SetBranchAddress("sigma", &bSigmaAg  );
   treeZr   -> SetBranchAddress("sigma", &bSigmaZr  );
   treeCu   -> SetBranchAddress("sigma", &bSigmaCu  );
@@ -130,7 +129,71 @@ int fitSpectra(const char *fileNameAg,
   treeGaAs -> SetBranchAddress("sigma", &bSigmaGaAs);
   treeTi   -> SetBranchAddress("sigma", &bSigmaTi);  
 
-  Double_t x[100], y[100], xe[100], ye[100];
+  ////////
+  // read inputs
+  //std::stringstream os("data/tot_toa_calibration/a_tot.dat");
+  ifstream readFile("data/tot_toa_calibration/a_tot.dat");
+  double a;
+  std::string line;
+  unsigned b=0,c=0;
+  parameters charge_parameters;
+  while(getline(readFile,line)){
+    std::stringstream os(line);
+    while(os >> a){
+      if((b%NPIXELSX)==0 && b!=0) ++c;
+      charge_parameters.f0[c][(b%NPIXELSY)] = a*1.0e3;
+      ++b;
+      //std::cout << c << " " << (b%NPIXELSY) << std::endl;
+    }
+  }
+  readFile.close();
+
+  // param 2
+  readFile.open("data/tot_toa_calibration/b_tot.dat");
+  b=0; c=0;
+  while(getline(readFile,line)){
+    std::stringstream os(line);
+    while(os >> a){
+      if((b%NPIXELSX)==0 && b!=0) ++c;
+      charge_parameters.f1[c][(b%NPIXELSY)] = a;
+      ++b;
+      //std::cout << c << " " << (b%NPIXELSY) << std::endl;
+    }
+  }
+  readFile.close();
+  // param 3
+  readFile.open("data/tot_toa_calibration/c_tot.dat");
+  b=0; c=0;
+  while(getline(readFile,line)){
+    std::stringstream os(line);
+    while(os >> a){
+      if((b%NPIXELSX)==0 && b!=0) ++c;
+      charge_parameters.f2[c][(b%NPIXELSY)] = a/1.0e3;
+      ++b;
+      //std::cout << c << " " << (b%NPIXELSY) << std::endl;
+    }
+  }
+  readFile.close();
+
+  // param 3
+  readFile.open("data/tot_toa_calibration/t_tot.dat");
+  b=0; c=0;
+  while(getline(readFile,line)){
+    std::stringstream os(line);
+    while(os >> a){
+      if((b%NPIXELSX)==0 && b!=0) ++c;
+      charge_parameters.f3[c][(b%NPIXELSY)] = a/1.0e3;
+      ++b;
+      //std::cout << c << " " << (b%NPIXELSY) << std::endl;
+    }
+  }
+  readFile.close();  
+
+  ////////
+  //end
+  ////////
+  
+  Double_t xval[100], yval[100], xe[100], ye[100], yvalup[100];
   TCanvas *can = new  TCanvas("c", "c", 500, 500);
 
   cout << __PRETTY_FUNCTION__ << ": opening root tree" << endl;  
@@ -150,12 +213,16 @@ int fitSpectra(const char *fileNameAg,
   tree -> Branch("f1", &bf1);
   double bf2 = 0.;
   tree -> Branch("f2", &bf2);
+  double bf3 = 0.;
+  tree -> Branch("f3", &bf3);
   double bfUp0 = 0.;
   tree -> Branch("fUp0", &bfUp0);
   double bfUp1 = 0.;
   tree -> Branch("fUp1", &bfUp1);
   double bfUp2 = 0.;
-  tree -> Branch("fUp2", &bfUp2);    
+  tree -> Branch("fUp2", &bfUp2);
+  double bfUp3 = 0.;
+  tree -> Branch("fUp3", &bfUp3);
 
   unsigned nEntries = treeAg->GetEntries();
   std::cout << "Processing: " << nEntries << std::endl;
@@ -179,13 +246,13 @@ int fitSpectra(const char *fileNameAg,
 //GaAr - 9.25/10.54
     
     // energy
-    x[0]=3.691;
-    x[1]=4.51;        
-    x[2]=8.5;
-    x[3]=10.0;    
-    x[4]=15.776;    
-    x[5]=22.166;
-    x[6]=25.272;
+    xval[0]=3.691;
+    xval[1]=4.51;        
+    xval[2]=8.5;
+    xval[3]=10.0;    
+    xval[4]=15.776;    
+    xval[5]=22.166;
+    xval[6]=25.272;
 
     xe[0]=0.0;
     xe[1]=0.0;     
@@ -196,13 +263,13 @@ int fitSpectra(const char *fileNameAg,
     xe[6]=0.0;   
 
     //value
-    y[0]=bMuCa;
-    y[1]=bMuTi;
-    y[2]=bMuCu;    
-    y[3]=bMuGaAs;
-    y[4]=bMuZr;
-    y[5]=bMuAg;
-    y[6]=bMuSn;
+    yval[0]=bMuCa;
+    yval[1]=bMuTi;
+    yval[2]=bMuCu;    
+    yval[3]=bMuGaAs;
+    yval[4]=bMuZr;
+    yval[5]=bMuAg;
+    yval[6]=bMuSn;
 
     //value
     ye[0]=bMuErrCa;
@@ -211,40 +278,63 @@ int fitSpectra(const char *fileNameAg,
     ye[3]=bMuErrGaAs;
     ye[4]=bMuErrZr;
     ye[5]=bMuErrAg;
-    ye[6]=bMuErrSn;    
+    ye[6]=bMuErrSn;
 
+    //ye[0]=bSigmaCa;
+    //ye[1]=bSigmaTi;
+    //ye[2]=bSigmaCu;    
+    //ye[3]=bSigmaGaAs;
+    //ye[4]=bSigmaZr;
+    //ye[5]=bSigmaAg;
+    //ye[6]=bSigmaSn;
+
+    if(bXAg==22 && bYAg==9)    ye[4]=20.0;
+    if(bXAg==35 && bYAg==152)  ye[4]=20.0;
+    if(bXAg==119 && bYAg==81)  ye[4]=20.0;
+    if(yval[4]<yval[3])  ye[4]=20.0;
+    if(yval[1]<yval[0])  ye[0]=20.0;
+    if(yval[4]>yval[5])  ye[4]=20.0;
+    if(yval[6]<yval[5])  ye[6]=20.0;        
+    if(ye[1]<0.3) ye[1]=0.35;
+    unsigned nLarge=0;
+    for(unsigned a=0; a<7;++a) if(ye[a]>3.0) ++nLarge;
+    if(nLarge>3) for(unsigned a=0; a<7;++a) if(ye[a]<3.0) ye[a]=5.0;
     char name[100];
     sprintf(name, "fFitX%03dY%03d", bXAg, bYAg);
     char nameup[100];
     sprintf(nameup, "fFitUpX%03dY%03d", bXAg, bYAg);
     
     //TGraph* gr = new TGraph(7,x,y);
-    TGraphErrors* gr = new TGraphErrors(7,x,y,xe,ye);
+    TGraphErrors* gr = new TGraphErrors(7,xval,yval,xe,ye);
     gr->GetXaxis()->SetTitle("Energy [keV]");
     gr->GetYaxis()->SetTitle("ToT");
-    
-    TF1 *fFit = new TF1(name, fitFunctionExpr, 3.0, 26.0); 
+
+
+    const char* m_fitFunctionExprA = "[0]*x + [1] - [2]/(x-2.0)";
+    TF1 *fFit = new TF1(name, m_fitFunctionExprA, 3.0, 26.0); 
     // first fit
     fFit -> SetParNames("scale", "#mu", "#sigma");
     fFit -> SetParLimits(0, 0., 100.);
     fFit -> SetParLimits(1, 0., 100.);
     fFit -> SetParLimits(2, 0., 100.);
+    //fFit -> SetParLimits(3, 2.5, 3.2);
     fFit -> SetParameter(0, 1.0);
     fFit -> SetParameter(1, 1.0);
     fFit -> SetParameter(2, 1.0);
+    //fFit -> SetParameter(3, 3.0);
     gr -> Fit(fFit, "Q && R"); // memory leak in the TLinearFitter class, bug in some root versions
 
     // Error up
     //value + sigma
-    y[0]=bMuCa+bSigmaCa;
-    y[1]=bMuTi+bSigmaTi;
-    y[2]=bMuCu+bSigmaCu;    
-    y[3]=bMuGaAs+bSigmaGaAs;
-    y[4]=bMuZr+bSigmaZr;
-    y[5]=bMuAg+bSigmaAg;
-    y[6]=bMuSn+bSigmaSn;
+    yvalup[0]=bMuCa+bSigmaCa;
+    yvalup[1]=bMuTi+bSigmaTi;
+    yvalup[2]=bMuCu+bSigmaCu;    
+    yvalup[3]=bMuGaAs+bSigmaGaAs;
+    yvalup[4]=bMuZr+bSigmaZr;
+    yvalup[5]=bMuAg+bSigmaAg;
+    yvalup[6]=bMuSn+bSigmaSn;
 
-    TGraphErrors* grup = new TGraphErrors(7,x,y,xe,ye);
+    TGraphErrors* grup = new TGraphErrors(7,xval,yvalup,xe,ye);
     grup->GetXaxis()->SetTitle("Energy [keV]");
     grup->GetYaxis()->SetTitle("ToT");
     
@@ -254,21 +344,88 @@ int fitSpectra(const char *fileNameAg,
     fFitUp -> SetParLimits(0, 0., 100.);
     fFitUp -> SetParLimits(1, 0., 100.);
     fFitUp -> SetParLimits(2, 0., 100.);
+    fFitUp -> SetParLimits(3, 1., 5.);
     fFitUp -> SetParameter(0, 1.0);
     fFitUp -> SetParameter(1, 1.0);
     fFitUp -> SetParameter(2, 1.0);
-    grup -> Fit(fFitUp, "Q && R"); // memory leak in the TLinearFitter class, bug in some root versions
-
+    fFitUp -> SetParameter(3, 3.0);
+    grup   -> Fit(fFitUp, "Q && R"); // memory leak in the TLinearFitter class, bug in some root versions
     
-    if(false){
-      can->Clear();
-      can->cd();
-      gr->Draw();
-      can->Update();
-      can->WaitPrimitive();
+    //if(bXAg==0 && bYAg==1){
+    bX = bXAg;
+    bY = bYAg;
+    const char* m_fitFunctionExpr = "[0]*x + [1] - [2]/(x-[3])";
+    //const char* m_fitFunctionExpr = "[0]*x + [1] - [2]/(x-2.0)";
+    TF1* fFitCharge   = new TF1(name,   m_fitFunctionExpr, 1.0, 40.0);    
+    TF1* fFitChargeUp   = new TF1(name,   m_fitFunctionExpr, 1.0, 40.0);
+    TF1 *fFit1 = NULL;
+    TF1 *fFit2 = NULL;
+    TF1 *fFitUp1 = NULL;
+    TF1 *fFitUp2 = NULL;    
+    double my_intercept=1.0;
+    double my_intercept_up=1.0;    
+    
+    if(true){
+
+      unsigned x= bX;
+      unsigned y= bY;
+
+      double ratio =charge_parameters.f0[x][y]/ fFit->GetParameter(0);
+      fFitCharge->SetParameter(0,fFit->GetParameter(0));
+      fFitCharge->SetParameter(1,fFit->GetParameter(1));
+      fFitCharge->SetParameter(2,ratio*charge_parameters.f2[x][y]);
+      fFitCharge->SetParameter(2,fFit->GetParameter(2));
+      fFitCharge->SetParameter(3,ratio*charge_parameters.f3[x][y]);
+      fFitCharge->SetLineColor(1);
+      //std::cout << "loop0" << std::endl;
+      fFit1 = FitLoop(x, y, ratio, fFit1, fFit, charge_parameters.f2[x][y], charge_parameters.f3[x][y], my_intercept, gr, yval);
+      //std::cout << "loop10" << std::endl;
+      //delete fFit1;
+      char nameFitAA[100];
+      sprintf(nameFitAA, "[0]*x + [1] - [2]/(x-%f)", my_intercept);      
+      const char* m_fitFunctionExprCC = nameFitAA;    
+      fFit2 = new TF1(name, m_fitFunctionExprCC, 1.0, 26.0);
+      //std::cout << "loop11 << " << fFit1 << std::endl;
+      fFit2 -> SetParNames("scale", "#mu", "#sigma");
+      fFit2 -> SetParLimits(0, 0., 100.);
+      fFit2 -> SetParLimits(1, 0., 100.);
+      fFit2 -> SetParLimits(2, 0., 100.);
+      fFit2 -> SetParameter(0, fFit1->GetParameter(0));
+      fFit2 -> SetParameter(1, fFit1->GetParameter(1));
+      fFit2 -> SetParameter(2, 3.0*ratio*charge_parameters.f2[x][y]);
+      fFit2->SetLineColor(4);
+      gr -> Fit(fFit2, "Q && R");
+      //std::cout << "loop1" << std::endl;
+      fFitUp1 = FitLoop(x, y, ratio, fFitUp1, fFitUp, charge_parameters.f2[x][y], charge_parameters.f3[x][y], my_intercept_up, grup, yvalup);
+
+      char nameFitM[100];
+      sprintf(nameFitM, "[0]*x + [1] - [2]/(x-%f)", my_intercept_up);      
+      const char* m_fitFunctionExprM = nameFitM;    
+      fFitUp2 = new TF1(name, m_fitFunctionExprM, 1.0, 26.0);
+      fFitUp2 -> SetParNames("scale", "#mu", "#sigma");
+      fFitUp2 -> SetParLimits(0, 0., 100.);
+      fFitUp2 -> SetParLimits(1, 0., 100.);
+      fFitUp2 -> SetParLimits(2, 0., 100.);
+      fFitUp2 -> SetParameter(0, fFitUp1->GetParameter(0));
+      fFitUp2 -> SetParameter(1, fFitUp1->GetParameter(1));
+      fFitUp2 -> SetParameter(2, 3.0*ratio*charge_parameters.f2[x][y]);
+      fFitUp2->SetLineColor(4);
+      grup -> Fit(fFitUp2, "Q && R");
       
-      std::cout <<"mean: " << fFit -> GetParameter(0) << " " << fFit -> GetParameter(1) << " " << fFit -> GetParameter(2) << std::endl;
-      std::cout <<"mean: " << fFitUp -> GetParameter(0) << " " << fFitUp -> GetParameter(1) << " " << fFitUp -> GetParameter(2) << std::endl;      
+      can->Clear();
+      //if(bX==25 && bY==20){
+      if(false){
+	can->cd();
+	gr->Draw();
+	fFitCharge->Draw("same");	
+	fFit->Draw("same");
+	fFit2->Draw("same");
+	can->Update();
+	can->WaitPrimitive();
+	std::cout << "cA: " << bMuCa << std::endl;
+	std::cout <<"mean: " << fFit -> GetParameter(0) << " " << fFit -> GetParameter(1) << " " << fFit -> GetParameter(2) << " x " << bX << " y " << bY << std::endl;
+	std::cout <<"mean: " << fFitUp -> GetParameter(0) << " " << fFitUp -> GetParameter(1) << " " << fFitUp -> GetParameter(2) << std::endl;
+      }
     }
 
     bX = bXAg;
@@ -277,14 +434,31 @@ int fitSpectra(const char *fileNameAg,
     bf1 = fFit -> GetParameter(1);
     bf2 = fFit -> GetParameter(2);
 
-    bfUp0 = fFitUp -> GetParameter(0);
-    bfUp1 = fFitUp -> GetParameter(1);
-    bfUp2 = fFitUp -> GetParameter(2);    
+    /*bf0 = fFitCharge -> GetParameter(0);
+    bf1 = fFitCharge -> GetParameter(1);
+    bf2 = fFitCharge -> GetParameter(2);    
+    bf3 = fFitCharge -> GetParameter(3);    
+    */
+    bf0 = fFit2 -> GetParameter(0);
+    bf1 = fFit2 -> GetParameter(1);
+    bf2 = fFit2 -> GetParameter(2);
+    bf3 = my_intercept;
+    
+    bfUp0 = fFitUp2 -> GetParameter(0);
+    bfUp1 = fFitUp2 -> GetParameter(1);
+    bfUp2 = fFitUp2 -> GetParameter(2);    
+    bfUp3 = my_intercept_up;
+    //std::cout << "my_par0: " << fFit2 -> GetParameter(0) << " " << fFitUp2 -> GetParameter(0) << std::endl;
+    //std::cout << "my_intercept: " << my_intercept << " " << my_intercept_up << std::endl;
     tree->Fill();
 
     loadBar(nEvt,nEntries);
 
     delete fFit;
+    delete fFit1;
+    delete fFit2;
+    delete fFitCharge;
+    delete fFitChargeUp;
     delete fFitUp;
   }
 
@@ -296,4 +470,65 @@ int fitSpectra(const char *fileNameAg,
   file -> Close();															   
   
   return 1;
+}
+
+TF1 * FitLoop(unsigned x, unsigned y, float ratio, TF1 *fFit1, TF1 *fit, double f2, double f3, double &my_intercept, TGraphErrors *gr, Double_t yval[]){
+
+  char name[100];
+    sprintf(name, "fFitX%03dY%03d", x, y);
+    char nameFit[100];
+    sprintf(nameFit, "[0]*x + [1] - [2]/(x-%f)", (ratio*f3));
+    const char* m_fitFunctionExprB = nameFit;
+    fFit1 = new TF1(name, m_fitFunctionExprB, 1.0, 26.0); 
+    fFit1 -> SetParNames("scale", "#mu", "#sigma");
+    fFit1 -> SetParLimits(0, 0., 100.);
+    fFit1 -> SetParLimits(1, 0., 100.);
+    fFit1 -> SetParLimits(2, 0., 100.);
+    fFit1 -> SetParameter(0, fit->GetParameter(0));
+    fFit1 -> SetParameter(1, fit->GetParameter(1));
+    fFit1 -> SetParameter(2, ratio*f2);
+    fFit1->SetLineColor(4);
+    gr -> Fit(fFit1, "Q && R");
+    my_intercept = ratio*f3;
+    unsigned nTry=0;
+    //std::cout << "loop2" << std::endl;
+    double my_eval = fFit1->Eval(3.691);
+    while(my_eval-yval[0]>0.1) {
+      //std::cout << "loop8" << std::endl;      
+      char nameFitA[100];
+      if((my_intercept)<1.0){
+	my_intercept=1.5;
+      }else if((my_intercept)<1.5){
+	my_intercept=2.0;
+      }else if((my_intercept)<2.0){
+	my_intercept=2.5;
+      }else if((my_intercept)<2.5){
+	my_intercept=2.6;
+      }else if((my_intercept)<2.7){
+	my_intercept=2.8;
+      }else if((my_intercept)<2.9){
+	my_intercept=3.0;
+      }      
+      sprintf(nameFitA, "[0]*x + [1] - [2]/(x-%f)", my_intercept);      
+      const char* m_fitFunctionExprC = nameFitA;
+      
+      TF1 *fFit3 = new TF1(name, m_fitFunctionExprC, 1.0, 26.0);
+      fFit3 -> SetParNames("scale", "#mu", "#sigma");
+      fFit3 -> SetParLimits(0, 0., 100.);
+      fFit3 -> SetParLimits(1, 0., 100.);
+      fFit3 -> SetParLimits(2, 0., 100.);
+      fFit3 -> SetParameter(0, fFit1->GetParameter(0));
+      fFit3 -> SetParameter(1, fFit1->GetParameter(1));
+      fFit3 -> SetParameter(2, 2.0*ratio*f2);
+      fFit3->SetLineColor(4);
+      gr -> Fit(fFit3, "Q && R");
+      //std::cout << "loop4" << std::endl;
+      my_eval = fFit3->Eval(3.691);
+      //std::cout << "loop4b" << std::endl;      
+      delete fFit3;
+      ++nTry;
+      if(nTry>5) break;
+    }
+    //std::cout << "loop3" << std::endl;
+    return fFit1;
 }
