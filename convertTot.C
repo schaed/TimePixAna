@@ -93,8 +93,8 @@ void convertTot::GetEnergyFromToT(const unsigned x, const unsigned y, const doub
   sprintf(nameup, "fFitUpX%03dY%03d", x, y);
 
   //if(fFit[x][y]==NULL){
-    TF1* fFit   = new TF1(name,   m_fitFunctionExpr, 3.0, 100.0);
-    TF1* fFitUp = new TF1(nameup, m_fitFunctionExpr, 3.0, 100.0);
+    TF1* fFit   = new TF1(name,   m_fitFunctionExpr, 2.0, 100.0);
+    TF1* fFitUp = new TF1(nameup, m_fitFunctionExpr, 2.0, 100.0);
 
     fFit->SetParameter(0,m_parameters.f0[x][y]);
     fFit->SetParameter(1,m_parameters.f1[x][y]);
@@ -169,14 +169,14 @@ void convertTot::DrawAllReso()
       char nameup[100];
       sprintf(nameup, "fFitUpX%03dY%03d", x, y);
       
-      TF1* fFit   = new TF1(name,   m_fitFunctionExpr, 3.0, 40.0);
+      TF1* fFit   = new TF1(name,   m_fitFunctionExpr, 2.0, 40.0);
       
       fFit->SetParameter(0,m_parameters.f0[x][y]);
       fFit->SetParameter(1,m_parameters.f1[x][y]);
       fFit->SetParameter(2,m_parameters.f2[x][y]);
       fFit->SetParameter(3,m_parameters.f3[x][y]);
 
-      TF1* fFitUp = new TF1(nameup, m_fitFunctionExpr, 3.0, 40.0);
+      TF1* fFitUp = new TF1(nameup, m_fitFunctionExpr, 2.0, 40.0);
 
       fFitUp->SetParameter(0,m_parameters.fUp0[x][y]);
       fFitUp->SetParameter(1,m_parameters.fUp1[x][y]);
@@ -187,8 +187,8 @@ void convertTot::DrawAllReso()
       //delete fFit;
       //fFit->Draw(opt.c_str());
       //if(opt=="") opt="same";
-      for(unsigned i=3; i<30; ++i){
-	hh->Fill(i,(fFitUp->Eval(double(i)) - fFit->Eval(double(i)))/fFit->Eval(double(i)));
+      for(unsigned i=2; i<30; ++i){
+	hh->Fill(i,fabs(fFitUp->Eval(double(i)) - fFit->Eval(double(i)))/fFit->Eval(double(i)));
       }
       delete fFit;
       delete fFitUp;

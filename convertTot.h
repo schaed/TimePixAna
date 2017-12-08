@@ -26,7 +26,7 @@ class convertTot{
   //convertTot(const char *fileName="data/fout.root", const char *fitFunc = "[0]*x + [1] - [2]/(x-3.0)");
 
   //convertTot(const char *fileName="data/fout_chargeInj.root", const char *fitFunc = "[0]*x + [1] - [2]/(x-[3])");  
-  convertTot(const char *fileName="data/fout_chargeInjVar.root", const char *fitFunc = "-([1]-[3]*[0]-x)/2.0/[0] + sqrt(([1]-[3]*[0]-x)*([1]-[3]*[0]-x) +4.0*[0]*([3]*[1]+[2]-[3]*x) )/2.0/[0]");
+  convertTot(const char *fileName="data/fout_chargeInjVarSys.root", const char *fitFunc = "-([1]-[3]*[0]-x)/2.0/[0] + sqrt(([1]-[3]*[0]-x)*([1]-[3]*[0]-x) +4.0*[0]*([3]*[1]+[2]-[3]*x) )/2.0/[0]");
   virtual ~convertTot();
 
   
