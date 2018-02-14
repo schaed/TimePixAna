@@ -110,7 +110,10 @@ void convertTot::GetEnergyFromToT(const unsigned x, const unsigned y, const doub
 
   energy = fFit->Eval(ToT);
   energy_resolution = fabs(fFitUp->Eval(ToT)-energy);
+  // calibrate using the fe55 from the H8 area
+  energy*=0.92;
   if(energy>1000.0) std::cout << "ERROR - ToT: " << ToT << " energy: " << energy << energy_resolution << std::endl;
+  
   //std::cout << "ToT: " << ToT << " energy: " << energy << " reso: " << energy_resolution << std::endl;
   delete fFit;
   delete fFitUp;
